@@ -16,23 +16,42 @@
       <span class="seal" aria-hidden="true">対</span>
       <div>
         <h1>今昔対照</h1>
-        <p>旧版地形図と、いまの地理院地図を同じ位置で動かす</p>
+        <p>旧版地形図と、いまの地図と空中写真を同じ位置で動かす</p>
       </div>
     </div>
-    <form class="search" id="search-form">
-      <label class="sr" for="search-q">地名・住所</label>
-      <input id="search-q" type="search" placeholder="地名・住所で移動" autocomplete="off">
-      <button type="submit">移動</button>
-      <div class="hits" id="search-hits" hidden></div>
-    </form>
+    <div class="finder">
+      <form class="search" id="search-form">
+        <label class="sr" for="search-q">地名・住所</label>
+        <input id="search-q" type="search" placeholder="地名・住所で移動" autocomplete="off">
+        <button type="submit">移動</button>
+        <div class="hits" id="search-hits" hidden></div>
+      </form>
+      <div class="search-tools">
+        <button type="button" id="draw-line">線を描く</button>
+        <button type="button" id="draw-point">点を置く</button>
+        <button type="button" id="export-kml" disabled>KMLを書き出す</button>
+      </div>
+      <div class="draw-bar" id="draw-bar" hidden>
+        <span id="draw-status">地図をクリックして頂点を追加</span>
+        <button type="button" id="draw-undo">戻す</button>
+        <button type="button" id="draw-finish">線を確定</button>
+        <button type="button" id="draw-cancel">やめる</button>
+      </div>
+    </div>
     <div class="top-actions">
-      <button type="button" class="primary header-save" data-open-save>JPEGで保存</button>
+      <button type="button" class="primary header-save" data-open-save>地形図を保存</button>
       <p class="coords" id="coord-readout">カーソルを地図に乗せると緯度経度が出ます</p>
     </div>
   </header>
 
   <div class="workspace">
     <aside class="panel">
+      <div class="panel-tools">
+        <button type="button" id="panel-narrow">狭く</button>
+        <button type="button" id="panel-wide">広く</button>
+        <button type="button" id="panel-toggle" aria-expanded="true">しまう</button>
+      </div>
+      <div class="panel-resize" id="panel-resize" role="separator" aria-orientation="vertical" aria-label="メニューの幅"></div>
       <div class="panel-scroll">
       <section>
         <h2>地域と年代</h2>
@@ -48,6 +67,7 @@
           <button type="button" id="era-prev">前の年代</button>
           <button type="button" id="era-next">次の年代</button>
         </div>
+        <button type="button" class="pane-toggle" id="toggle-old">旧版地形図を閉じる</button>
         <p class="hint">同じ年に 5万分1 と 2万分1 がある地域は、両方を選べます。2万分1の方が細かい原図です。関東と東北地方太平洋岸は 5万分1 で、拡大の上限が一段低くなっています。</p>
         <fieldset class="choice">
           <legend>表示の粗密</legend>
@@ -67,10 +87,24 @@
           <select id="gsi"></select>
         </label>
         <label class="field">
-          <span>右に旧版を重ねる <b id="overlay-val">0%</b></span>
+          <span>左の地図に旧版を重ねる <b id="overlay-val">0%</b></span>
           <input id="overlay" type="range" min="0" max="100" value="0" step="5">
         </label>
-        <p class="hint">明治の図だけでは今の場所が分かりにくいとき、右の現代地図に旧版を透かして合わせます。左右は常に同じ位置・同じ拡大率で動きます。</p>
+        <p class="hint">明治の図だけでは今の場所が分かりにくいとき、左の標準地図に旧版を透かして合わせます。3枚は同じ位置・同じ拡大率で動きます。</p>
+      </section>
+
+      <section>
+        <h2>空中写真</h2>
+        <label class="field">
+          <span>年代</span>
+          <select id="air"></select>
+        </label>
+        <div class="row-buttons">
+          <button type="button" id="air-older">前の年代</button>
+          <button type="button" id="air-newer">次の年代</button>
+        </div>
+        <button type="button" class="pane-toggle" id="toggle-air">空中写真を閉じる</button>
+        <p class="hint" id="air-hint">地理院タイルの年代別空中写真です。</p>
       </section>
 
       <section>
@@ -83,7 +117,7 @@
           <button type="button" id="load-sample">サンプルを読み込む</button>
           <button type="button" id="fit-kml">線の範囲へ</button>
         </div>
-        <p class="hint">ファイルごとに色・線種・太さを変えられます。一覧の上が最前面で、下へいくほど背面です。左右の地図は同じ順です。</p>
+        <p class="hint">読み込んだKMLも、上で描いた線・点も、この一覧に並びます。色・太さ・削除はここで変えられます。上が最前面です。描いた図形はページを閉じると消えます。残すときは上の「KMLを書き出す」です。</p>
         <ul class="layers" id="layers"></ul>
       </section>
 
@@ -92,7 +126,7 @@
         <label class="check"><input id="show-compass" type="checkbox" checked> 方位を表示</label>
         <label class="check"><input id="show-scale" type="checkbox" checked> スケールバーを表示</label>
         <label class="check"><input id="show-center" type="checkbox" checked> 中心の十字</label>
-        <label class="check"><input id="show-right-deco" type="checkbox"> 右の地図にも方位とスケール</label>
+        <label class="check"><input id="show-right-deco" type="checkbox"> ほかの地図にも方位とスケール</label>
         <label class="field">
           <span>方位の大きさ <b id="compass-val">100%</b></span>
           <input id="compass-size" type="range" min="50" max="180" value="100" step="5">
@@ -137,29 +171,20 @@
           <button type="button" id="pin-arm">クリックでピンを置く</button>
           <button type="button" id="pin-clear">ピンを消す</button>
         </div>
-        <p class="hint" id="pin-readout">ピンは左右の同じ地点に出ます。明治側で、いま見ている場所を固定できます。</p>
+        <p class="hint" id="pin-readout">ピンは3つの地図の同じ地点に出ます。</p>
       </section>
 
       </div>
       <div class="panel-save">
-        <button type="button" class="primary" data-open-save>JPEGで保存</button>
+        <button type="button" class="primary" data-open-save>地形図を保存</button>
+        <button type="button" data-open-air>空中写真を保存</button>
       </div>
     </aside>
 
     <div class="maps">
       <section class="map-wrap">
         <div class="sheet">
-          <span>旧版地形図</span>
-          <strong id="left-title">—</strong>
-        </div>
-        <div id="map-old" class="map"></div>
-        <div class="cursor" id="cursor-old" hidden></div>
-        <div class="center-cross" id="cross-old"></div>
-        <div class="deco" id="deco-old"></div>
-      </section>
-      <section class="map-wrap">
-        <div class="sheet">
-          <span>地理院地図</span>
+          <span id="now-kind">標準地図</span>
           <strong id="right-title">標準地図</strong>
         </div>
         <div id="map-now" class="map"></div>
@@ -167,6 +192,36 @@
         <div class="center-cross" id="cross-now"></div>
         <div class="deco" id="deco-now"></div>
       </section>
+      <section class="map-wrap" id="wrap-old">
+        <div class="sheet sheet-closable">
+          <div class="sheet-name">
+            <span>旧版地形図</span>
+            <strong id="left-title">—</strong>
+          </div>
+          <button type="button" class="map-close" id="close-old">閉じる</button>
+        </div>
+        <div id="map-old" class="map"></div>
+        <div class="cursor" id="cursor-old" hidden></div>
+        <div class="center-cross" id="cross-old"></div>
+        <div class="deco" id="deco-old"></div>
+      </section>
+      <section class="map-wrap" id="wrap-air">
+        <div class="sheet sheet-closable">
+          <div class="sheet-name">
+            <span>空中写真</span>
+            <strong id="air-title">全国最新</strong>
+          </div>
+          <button type="button" class="map-close" id="close-air">閉じる</button>
+        </div>
+        <div id="map-air" class="map"></div>
+        <div class="cursor" id="cursor-air" hidden></div>
+        <div class="center-cross" id="cross-air"></div>
+        <div class="deco" id="deco-air"></div>
+      </section>
+      <div class="map-reopen-bar">
+        <button type="button" id="reopen-old" hidden>旧版地形図を開く</button>
+        <button type="button" id="reopen-air" hidden>空中写真を開く</button>
+      </div>
     </div>
   </div>
 
@@ -180,7 +235,14 @@
 
   <div class="modal" id="save-modal" hidden>
     <div class="dialog" role="dialog" aria-labelledby="save-title">
-      <h2 id="save-title">JPEGで保存</h2>
+      <h2 id="save-title">地形図を保存</h2>
+      <fieldset class="choice">
+        <legend>保存形式</legend>
+        <div class="seg" id="save-format">
+          <button type="button" data-format="jpeg" class="is-on">JPEG</button>
+          <button type="button" data-format="xlsx">Excel</button>
+        </div>
+      </fieldset>
       <fieldset class="choice">
         <legend>保存する地図</legend>
         <div class="seg" id="save-target">
@@ -213,8 +275,39 @@
     </div>
   </div>
 
+  <div class="modal" id="air-modal" hidden>
+    <div class="dialog" role="dialog" aria-labelledby="air-save-title">
+      <h2 id="air-save-title">空中写真を保存</h2>
+      <fieldset class="choice">
+        <legend>保存形式</legend>
+        <div class="seg" id="air-format">
+          <button type="button" data-format="jpeg" class="is-on">JPEG</button>
+          <button type="button" data-format="xlsx">Excel</button>
+        </div>
+      </fieldset>
+      <p class="hint" id="air-hint-save">いま表示している空中写真だけを保存します。地形図は入りません。ファイル名は年代です。</p>
+      <fieldset class="choice">
+        <legend>保存画像の細かさ</legend>
+        <div class="seg" id="air-ratio">
+          <button type="button" data-ratio="1">低</button>
+          <button type="button" data-ratio="1.5" class="is-on">標準</button>
+          <button type="button" data-ratio="2">高</button>
+        </div>
+      </fieldset>
+      <p class="hint" id="air-pixels">—</p>
+      <label class="check"><input id="air-caption" type="checkbox" checked> 左上に年代を書く</label>
+      <p class="filename" id="air-name">—</p>
+      <p class="hint" id="air-progress"></p>
+      <div class="row-buttons">
+        <button type="button" id="air-cancel">キャンセル</button>
+        <button type="button" class="primary" id="air-go">保存する</button>
+      </div>
+    </div>
+  </div>
+
   <script src="vendor/leaflet.js"></script>
   <script src="datasets.js"></script>
+  <script src="xlsx.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
