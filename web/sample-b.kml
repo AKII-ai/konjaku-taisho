@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>皇居の堀</name>
+    <Placemark>
+      <name>皇居の堀</name>
+      <LineString>
+        <coordinates>
+          139.748600,35.688900,0
+          139.759800,35.690600,0
+          139.761400,35.683400,0
+          139.750200,35.680900,0
+          139.748600,35.688900,0
+        </coordinates>
+      </LineString>
+    </Placemark>
+  </Document>
+</kml>

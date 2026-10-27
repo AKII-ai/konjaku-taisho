@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>東京駅から皇居</name>
+    <Placemark>
+      <name>東京駅から皇居</name>
+      <LineString>
+        <coordinates>
+          139.767125,35.681236,0
+          139.761900,35.682400,0
+          139.756200,35.684900,0
+          139.752800,35.686800,0
+          139.752200,35.688600,0
+        </coordinates>
+      </LineString>
+    </Placemark>
+    <Placemark>
+      <name>東京駅</name>
+      <Point>
+        <coordinates>139.767125,35.681236,0</coordinates>
+      </Point>
+    </Placemark>
+  </Document>
+</kml>

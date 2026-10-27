@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>今昔対照</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="seal" aria-hidden="true">対</span>
+      <div>
+        <h1>今昔対照</h1>
+        <p>旧版地形図と、いまの地理院地図を同じ位置で動かす</p>
+      </div>
+    </div>
+    <form class="search" id="search-form">
+      <label class="sr" for="search-q">地名・住所</label>
+      <input id="search-q" type="search" placeholder="地名・住所で移動" autocomplete="off">
+      <button type="submit">移動</button>
+      <div class="hits" id="search-hits" hidden></div>
+    </form>
+    <div class="top-actions">
+      <button type="button" class="primary header-save" data-open-save>JPEGで保存</button>
+      <p class="coords" id="coord-readout">カーソルを地図に乗せると緯度経度が出ます</p>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="panel">
+      <div class="panel-scroll">
+      <section>
+        <h2>地域と年代</h2>
+        <label class="field">
+          <span>地域</span>
+          <select id="dataset"></select>
+        </label>
+        <label class="field">
+          <span>年代と原図の縮尺</span>
+          <select id="era"></select>
+        </label>
+        <div class="row-buttons">
+          <button type="button" id="era-prev">前の年代</button>
+          <button type="button" id="era-next">次の年代</button>
+        </div>
+        <p class="hint">同じ年に 5万分1 と 2万分1 がある地域は、両方を選べます。2万分1の方が細かい原図です。関東と東北地方太平洋岸は 5万分1 で、拡大の上限が一段低くなっています。</p>
+        <fieldset class="choice">
+          <legend>表示の粗密</legend>
+          <div class="seg" id="res-bias">
+            <button type="button" data-bias="-1">低</button>
+            <button type="button" data-bias="0">標準</button>
+            <button type="button" data-bias="1">高</button>
+          </div>
+        </fieldset>
+        <p class="hint" id="res-hint">標準は、その拡大率のタイルをそのまま使います。高は一段細かいタイル、低は一段粗いタイルです。</p>
+      </section>
+
+      <section>
+        <h2>いまの地図</h2>
+        <label class="field">
+          <span>地理院地図</span>
+          <select id="gsi"></select>
+        </label>
+        <label class="field">
+          <span>右に旧版を重ねる <b id="overlay-val">0%</b></span>
+          <input id="overlay" type="range" min="0" max="100" value="0" step="5">
+        </label>
+        <p class="hint">明治の図だけでは今の場所が分かりにくいとき、右の現代地図に旧版を透かして合わせます。左右は常に同じ位置・同じ拡大率で動きます。</p>
+      </section>
+
+      <section>
+        <h2>KML</h2>
+        <label class="drop" id="drop">
+          <input id="kml-file" type="file" accept=".kml,.xml,application/vnd.google-earth.kml+xml" multiple>
+          <span>KMLをドロップ、またはクリックして選ぶ</span>
+        </label>
+        <div class="row-buttons">
+          <button type="button" id="load-sample">サンプルを読み込む</button>
+          <button type="button" id="fit-kml">線の範囲へ</button>
+        </div>
+        <p class="hint">ファイルごとに色・線種・太さを変えられます。一覧の上が最前面で、下へいくほど背面です。左右の地図は同じ順です。</p>
+        <ul class="layers" id="layers"></ul>
+      </section>
+
+      <section>
+        <h2>方位とスケール</h2>
+        <label class="check"><input id="show-compass" type="checkbox" checked> 方位を表示</label>
+        <label class="check"><input id="show-scale" type="checkbox" checked> スケールバーを表示</label>
+        <label class="check"><input id="show-center" type="checkbox" checked> 中心の十字</label>
+        <label class="check"><input id="show-right-deco" type="checkbox"> 右の地図にも方位とスケール</label>
+        <label class="field">
+          <span>方位の大きさ <b id="compass-val">100%</b></span>
+          <input id="compass-size" type="range" min="50" max="180" value="100" step="5">
+        </label>
+        <label class="field">
+          <span>スケールの大きさ <b id="scale-val">100%</b></span>
+          <input id="scale-size" type="range" min="50" max="180" value="100" step="5">
+        </label>
+        <label class="field">
+          <span>目盛りのピッチ</span>
+          <select id="pitch">
+            <option value="auto">自動（地図に対して長くなりすぎない）</option>
+            <option value="10">10 m</option>
+            <option value="20">20 m</option>
+            <option value="50">50 m</option>
+            <option value="100">100 m</option>
+            <option value="200">200 m</option>
+            <option value="500">500 m</option>
+            <option value="1000">1 km</option>
+            <option value="2000">2 km</option>
+            <option value="5000">5 km</option>
+            <option value="10000">10 km</option>
+            <option value="20000">20 km</option>
+            <option value="50000">50 km</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>目盛りの数</span>
+          <select id="segments">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4" selected>4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+        <p class="hint" id="scale-readout">—</p>
+      </section>
+
+      <section>
+        <h2>地点ピン</h2>
+        <div class="row-buttons">
+          <button type="button" id="pin-arm">クリックでピンを置く</button>
+          <button type="button" id="pin-clear">ピンを消す</button>
+        </div>
+        <p class="hint" id="pin-readout">ピンは左右の同じ地点に出ます。明治側で、いま見ている場所を固定できます。</p>
+      </section>
+
+      </div>
+      <div class="panel-save">
+        <button type="button" class="primary" data-open-save>JPEGで保存</button>
+      </div>
+    </aside>
+
+    <div class="maps">
+      <section class="map-wrap">
+        <div class="sheet">
+          <span>旧版地形図</span>
+          <strong id="left-title">—</strong>
+        </div>
+        <div id="map-old" class="map"></div>
+        <div class="cursor" id="cursor-old" hidden></div>
+        <div class="center-cross" id="cross-old"></div>
+        <div class="deco" id="deco-old"></div>
+      </section>
+      <section class="map-wrap">
+        <div class="sheet">
+          <span>地理院地図</span>
+          <strong id="right-title">標準地図</strong>
+        </div>
+        <div id="map-now" class="map"></div>
+        <div class="cursor" id="cursor-now" hidden></div>
+        <div class="center-cross" id="cross-now"></div>
+        <div class="deco" id="deco-now"></div>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    <span>今昔マップ on the web（谷謙二）</span>
+    <span>地理院タイル（国土地理院）</span>
+    <span id="launch-note">手元で使うときは start.bat</span>
+  </footer>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <div class="modal" id="save-modal" hidden>
+    <div class="dialog" role="dialog" aria-labelledby="save-title">
+      <h2 id="save-title">JPEGで保存</h2>
+      <fieldset class="choice">
+        <legend>保存する地図</legend>
+        <div class="seg" id="save-target">
+          <button type="button" data-target="old" class="is-on">今昔マップ</button>
+          <button type="button" data-target="gsi">地理院地図</button>
+          <button type="button" data-target="pair">左右に並べる</button>
+        </div>
+      </fieldset>
+      <p class="hint" id="save-hint">この地域で今昔マップにある年代から選びます。ファイル名はその年代になります。</p>
+      <label class="field" id="save-era-field">
+        <span>保存する年代</span>
+        <select id="save-era"></select>
+      </label>
+      <fieldset class="choice">
+        <legend>保存画像の細かさ</legend>
+        <div class="seg" id="save-ratio">
+          <button type="button" data-ratio="1">低</button>
+          <button type="button" data-ratio="1.5">標準</button>
+          <button type="button" data-ratio="2">高</button>
+        </div>
+      </fieldset>
+      <p class="hint" id="save-pixels">—</p>
+      <label class="check" id="save-caption-field"><input id="save-caption" type="checkbox" checked> 左上に年代と地形図の種類を書く</label>
+      <p class="filename" id="save-name">—</p>
+      <p class="hint" id="save-progress"></p>
+      <div class="row-buttons">
+        <button type="button" id="save-cancel">キャンセル</button>
+        <button type="button" class="primary" id="save-go">保存する</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="vendor/leaflet.js"></script>
+  <script src="datasets.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
