@@ -16,6 +16,7 @@ ALLOWED_HOSTS = {
     "ktgis.net",
     "cyberjapandata.gsi.go.jp",
     "msearch.gsi.go.jp",
+    "tile.openstreetmap.org",
 }
 
 

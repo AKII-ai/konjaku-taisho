@@ -93,6 +93,7 @@ const state = {
   panelCollapsed: false,
   showOld: true,
   showAir: true,
+  nowBase: "gsi",
 };
 
 let seq = 1;
@@ -257,10 +258,13 @@ function toast(message) {
   }, 3400);
 }
 
+let wipeGoogleKey = false;
+
 function loadStore() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
     if (!saved) return;
+    wipeGoogleKey = typeof saved.googleKey === "string" && saved.googleKey.length > 0;
     Object.assign(state, {
       folder: saved.folder || state.folder,
       eraFolder: saved.eraFolder || state.eraFolder,
@@ -281,6 +285,7 @@ function loadStore() {
       panelCollapsed: !!saved.panelCollapsed,
       showOld: saved.showOld !== false,
       showAir: saved.showAir !== false,
+      nowBase: saved.nowBase === "osm" || saved.nowBase === "google" ? "osm" : "gsi",
     });
   } catch {
     /* 保存データが壊れていても起動する */
@@ -330,6 +335,7 @@ function saveStore() {
       panelCollapsed: state.panelCollapsed,
       showOld: state.showOld,
       showAir: state.showAir,
+      nowBase: state.nowBase,
     })
   );
 }
@@ -368,19 +374,49 @@ function refreshOldTiles() {
   updateResHint();
 }
 
+function usingOsm() {
+  return state.nowBase === "osm";
+}
+
+function applyNowBaseUi() {
+  for (const button of $("now-base").querySelectorAll("button")) {
+    button.classList.toggle("is-on", button.dataset.base === state.nowBase);
+  }
+  $("gsi-field").hidden = usingOsm();
+  $("osm-attr").hidden = !usingOsm();
+  for (const button of document.querySelectorAll("[data-target='gsi']")) {
+    button.textContent = usingOsm() ? "OpenStreetMap" : "地理院地図";
+  }
+}
+
 function refreshNowTiles() {
   const spec = gsiSpec();
-  if (nowTiles) rightMap.removeLayer(nowTiles);
-  nowTiles = L.tileLayer(gsiTemplate(spec), {
-    crossOrigin: "anonymous",
-    detectRetina: false,
-    maxZoom: 18,
-    maxNativeZoom: spec.max,
-    errorTileUrl: TRANSPARENT,
-  }).addTo(rightMap);
+  if (nowTiles) {
+    rightMap.removeLayer(nowTiles);
+    nowTiles = null;
+  }
+  if (usingOsm()) {
+    nowTiles = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      maxNativeZoom: 19,
+      errorTileUrl: TRANSPARENT,
+    }).addTo(rightMap);
+    $("now-kind").textContent = "OpenStreetMap";
+    $("right-title").textContent = "OpenStreetMap";
+  } else {
+    nowTiles = L.tileLayer(gsiTemplate(spec), {
+      crossOrigin: "anonymous",
+      detectRetina: false,
+      maxZoom: 18,
+      maxNativeZoom: spec.max,
+      errorTileUrl: TRANSPARENT,
+    }).addTo(rightMap);
+    $("now-kind").textContent = spec.id === "std" ? "標準地図" : "地理院地図";
+    $("right-title").textContent = spec.name;
+  }
   if (overlayTiles) overlayTiles.bringToFront();
-  $("now-kind").textContent = spec.id === "std" ? "標準地図" : "地理院地図";
-  $("right-title").textContent = spec.name;
+  stackLayers();
+  applyNowBaseUi();
 }
 
 function refreshAirTiles() {
@@ -539,6 +575,7 @@ function applyControlValues() {
   for (const button of $("res-bias").querySelectorAll("button")) {
     button.classList.toggle("is-on", Number(button.dataset.bias) === state.resBias);
   }
+  applyNowBaseUi();
 }
 
 function updateResHint() {
@@ -1467,7 +1504,7 @@ function drawAirCaption(ctx, photo, ratio) {
 function drawCredit(ctx, width, height, ratio, target) {
   const parts = [];
   if (target !== "gsi") parts.push("今昔マップ on the web（谷謙二）");
-  if (target !== "old") parts.push("地理院タイル（国土地理院）");
+  if (target !== "old") parts.push(usingOsm() ? "© OpenStreetMap contributors" : "地理院タイル（国土地理院）");
   const text = parts.join("／");
   ctx.save();
   ctx.font = `${11 * ratio}px "Zen Kaku Gothic New", sans-serif`;
@@ -1571,15 +1608,23 @@ function updateSavePreview() {
   $("save-era-field").hidden = gsiOnly || excel;
   $("save-caption-field").hidden = gsiOnly;
   if (excel && gsiOnly) {
-    $("save-hint").textContent = "いまの地理院地図を1枚のシートにします。KMLはオートシェイプになります。";
+    $("save-hint").textContent = usingOsm()
+      ? "いまのOpenStreetMapを1枚のシートにします。KMLはオートシェイプになります。"
+      : "いまの地理院地図を1枚のシートにします。KMLはオートシェイプになります。";
   } else if (excel) {
     $("save-hint").textContent = "表示している範囲で、この地域の年代ごとにシートを作ります。KMLはオートシェイプになります。";
   } else if (gsiOnly) {
-    $("save-hint").textContent = "いま表示している地理院地図を保存します。ファイル名は地図の種類になります。";
+    $("save-hint").textContent = usingOsm()
+      ? "いま表示しているOpenStreetMapを保存します。"
+      : "いま表示している地理院地図を保存します。ファイル名は地図の種類になります。";
+  } else if (target === "pair" && usingOsm()) {
+    $("save-hint").textContent = "今昔マップの年代を選びます。右にはOpenStreetMapが並びます。";
   } else {
     $("save-hint").textContent = "この地域で今昔マップにある年代から選びます。ファイル名はその年代になります。";
   }
-  const base = gsiOnly ? `地理院地図_${gsiSpec().name}` : excel ? `地形図_${ds.name}` : fileBase(ds, item);
+  const base = gsiOnly
+    ? (usingOsm() ? "OpenStreetMap" : `地理院地図_${gsiSpec().name}`)
+    : excel ? `地形図_${ds.name}` : fileBase(ds, item);
   $("save-name").textContent = excel ? `${base}.xlsx` : `${base}.jpg`;
   const size = shownMap(target === "gsi" ? rightMap : leftMap).getSize();
   const ratio = state.saveRatio;
@@ -1620,7 +1665,7 @@ async function renderTopoCanvas(item, includeVectors, onStep) {
   const zoom = (target === "gsi" ? nowView : oldView).getZoom();
   const oldZoom = urlZoomFor(zoom, state.resBias, ds.minZ, ds.maxZ);
   const spec = gsiSpec();
-  const nowZoom = clamp(zoom, 0, spec.max);
+  const nowZoom = clamp(zoom, 0, usingOsm() ? 19 : spec.max);
   const oldTiles = drawOld ? tilesForView(oldView, oldZoom) : [];
   const nowTileList = drawNow ? tilesForView(nowView, nowZoom) : [];
   if (oldTiles.length > 160 || nowTileList.length > 160) throw wideError();
@@ -1657,7 +1702,9 @@ async function renderTopoCanvas(item, includeVectors, onStep) {
       ctx,
       nowView,
       nowTileList,
-      (tile) => `https://cyberjapandata.gsi.go.jp/xyz/${spec.id}/${tile.z}/${tile.x}/${tile.y}.${spec.ext}`,
+      (tile) => usingOsm()
+        ? `https://tile.openstreetmap.org/${tile.z}/${tile.x}/${tile.y}.png`
+        : `https://cyberjapandata.gsi.go.jp/xyz/${spec.id}/${tile.z}/${tile.x}/${tile.y}.${spec.ext}`,
       ratio,
       pair ? width : 0,
       0,
@@ -1690,7 +1737,9 @@ async function exportJpeg() {
     $("save-progress").textContent = `地図画像を集めています　${done} / ${total}`;
   });
   const image = await canvasJpeg(rendered.canvas);
-  const filename = saveTarget() === "gsi" ? `地理院地図_${gsiSpec().name}.jpg` : `${fileBase(ds, item)}.jpg`;
+  const filename = saveTarget() === "gsi"
+    ? (usingOsm() ? "OpenStreetMap.jpg" : `地理院地図_${gsiSpec().name}.jpg`)
+    : `${fileBase(ds, item)}.jpg`;
   downloadBlob(new Blob([image], { type: "image/jpeg" }), filename);
   $("save-progress").textContent = `${filename} を保存しました`;
   $("save-go").disabled = false;
@@ -1706,7 +1755,7 @@ async function exportTopoExcel() {
   await document.fonts.ready;
   for (let index = 0; index < items.length; index += 1) {
     const item = items[index];
-    const label = item ? fileBase(ds, item) : gsiSpec().name;
+    const label = item ? fileBase(ds, item) : (usingOsm() ? "OpenStreetMap" : gsiSpec().name);
     $("save-progress").textContent = `${label} を集めています（${index + 1} / ${items.length}）`;
     try {
       const rendered = await renderTopoCanvas(item || era(), false, (done, total) => {
@@ -1729,7 +1778,9 @@ async function exportTopoExcel() {
       });
     }
   }
-  const filename = target === "gsi" ? `地理院地図_${gsiSpec().name}.xlsx` : `地形図_${ds.name}.xlsx`;
+  const filename = target === "gsi"
+    ? (usingOsm() ? "OpenStreetMap.xlsx" : `地理院地図_${gsiSpec().name}.xlsx`)
+    : `地形図_${ds.name}.xlsx`;
   const bytes = buildMapWorkbook(sheets);
   downloadBlob(
     new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
@@ -1912,6 +1963,15 @@ function bindUi() {
     state.gsi = $("gsi").value;
     refreshNowTiles();
     saveStore();
+  });
+  $("now-base").addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button) return;
+    state.nowBase = button.dataset.base === "osm" ? "osm" : "gsi";
+    applyNowBaseUi();
+    refreshNowTiles();
+    saveStore();
+    if (!$("save-modal").hidden) updateSavePreview();
   });
   $("overlay").addEventListener("input", () => {
     state.overlay = Number($("overlay").value) / 100;
@@ -2276,6 +2336,7 @@ function main() {
   const local = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.protocol === "file:";
   if (!local) $("launch-note").hidden = true;
   loadStore();
+  if (wipeGoogleKey) saveStore();
   applyPanel();
   applyMapPanes();
   fillDatasets();

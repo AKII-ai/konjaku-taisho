@@ -82,7 +82,14 @@
 
       <section>
         <h2>いまの地図</h2>
-        <label class="field">
+        <fieldset class="choice">
+          <legend>左の地図</legend>
+          <div class="seg seg-2" id="now-base">
+            <button type="button" data-base="gsi" class="is-on">地理院地図</button>
+            <button type="button" data-base="osm">OpenStreetMap</button>
+          </div>
+        </fieldset>
+        <label class="field" id="gsi-field">
           <span>地理院地図</span>
           <select id="gsi"></select>
         </label>
@@ -90,7 +97,7 @@
           <span>左の地図に旧版を重ねる <b id="overlay-val">0%</b></span>
           <input id="overlay" type="range" min="0" max="100" value="0" step="5">
         </label>
-        <p class="hint">明治の図だけでは今の場所が分かりにくいとき、左の標準地図に旧版を透かして合わせます。3枚は同じ位置・同じ拡大率で動きます。</p>
+        <p class="hint">明治の図だけでは今の場所が分かりにくいとき、左の地図に旧版を透かして合わせます。3枚は同じ位置・同じ拡大率で動きます。</p>
       </section>
 
       <section>
@@ -188,6 +195,7 @@
           <strong id="right-title">標準地図</strong>
         </div>
         <div id="map-now" class="map"></div>
+        <a class="osm-attr" id="osm-attr" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" hidden>© OpenStreetMap</a>
         <div class="cursor" id="cursor-now" hidden></div>
         <div class="center-cross" id="cross-now"></div>
         <div class="deco" id="deco-now"></div>
