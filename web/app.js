@@ -480,7 +480,7 @@ function bindCursor(from, el) {
     el.style.transform = `translate(${point.x}px, ${point.y}px)`;
     const ll = event.latlng;
     $("coord-readout").textContent =
-      `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}　ズーム ${from.getZoom()}`;
+      `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}　ズーム ${formatZoom(from.getZoom())}`;
   });
   from.on("mouseout", () => {
     el.hidden = true;
@@ -1234,8 +1234,14 @@ function clearPin() {
   $("pin-readout").textContent = "ピンは3つの地図の同じ地点に出ます。";
 }
 
+function formatZoom(zoom) {
+  const step = Math.round(zoom * 4) / 4;
+  if (Number.isInteger(step)) return String(step);
+  return step.toFixed(2).replace(/0$/, "");
+}
+
 function urlZoomFor(mapZoom, bias, minZ, maxZ) {
-  const tileZoom = clamp(mapZoom, minZ - bias, maxZ - bias);
+  const tileZoom = clamp(Math.round(mapZoom), minZ - bias, maxZ - bias);
   return tileZoom + bias;
 }
 
@@ -1665,7 +1671,7 @@ async function renderTopoCanvas(item, includeVectors, onStep) {
   const zoom = (target === "gsi" ? nowView : oldView).getZoom();
   const oldZoom = urlZoomFor(zoom, state.resBias, ds.minZ, ds.maxZ);
   const spec = gsiSpec();
-  const nowZoom = clamp(zoom, 0, usingOsm() ? 19 : spec.max);
+  const nowZoom = clamp(Math.round(zoom), 0, usingOsm() ? 19 : spec.max);
   const oldTiles = drawOld ? tilesForView(oldView, oldZoom) : [];
   const nowTileList = drawNow ? tilesForView(nowView, nowZoom) : [];
   if (oldTiles.length > 160 || nowTileList.length > 160) throw wideError();
@@ -2168,7 +2174,9 @@ function setupMaps() {
   const common = {
     zoomControl: false,
     attributionControl: false,
-    zoomSnap: 1,
+    zoomSnap: 0.25,
+    zoomDelta: 0.5,
+    wheelPxPerZoomLevel: 240,
     minZoom: 5,
     maxZoom: 18,
   };
@@ -2295,6 +2303,8 @@ function bindPanel() {
 function applyMapPanes() {
   $("wrap-old").classList.toggle("is-closed", !state.showOld);
   $("wrap-air").classList.toggle("is-closed", !state.showAir);
+  $("switch-old").classList.toggle("is-closed", !state.showOld);
+  $("switch-air").classList.toggle("is-closed", !state.showAir);
   $("reopen-old").hidden = state.showOld;
   $("reopen-air").hidden = state.showAir;
   $("toggle-old").textContent = state.showOld ? "旧版地形図を閉じる" : "旧版地形図を開く";

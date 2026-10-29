@@ -11,41 +11,28 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="top">
-    <div class="brand">
-      <span class="seal" aria-hidden="true">対</span>
-      <div>
-        <h1>今昔対照</h1>
-        <p>旧版地形図と、いまの地図と空中写真を同じ位置で動かす</p>
-      </div>
-    </div>
-    <div class="finder">
-      <form class="search" id="search-form">
-        <label class="sr" for="search-q">地名・住所</label>
-        <input id="search-q" type="search" placeholder="地名・住所で移動" autocomplete="off">
-        <button type="submit">移動</button>
-        <div class="hits" id="search-hits" hidden></div>
-      </form>
-      <div class="search-tools">
-        <button type="button" id="draw-line">線を描く</button>
-        <button type="button" id="draw-point">点を置く</button>
-        <button type="button" id="export-kml" disabled>KMLを書き出す</button>
-      </div>
-      <div class="draw-bar" id="draw-bar" hidden>
-        <span id="draw-status">地図をクリックして頂点を追加</span>
-        <button type="button" id="draw-undo">戻す</button>
-        <button type="button" id="draw-finish">線を確定</button>
-        <button type="button" id="draw-cancel">やめる</button>
-      </div>
-    </div>
-    <div class="top-actions">
-      <button type="button" class="primary header-save" data-open-save>地形図を保存</button>
-      <p class="coords" id="coord-readout">カーソルを地図に乗せると緯度経度が出ます</p>
-    </div>
-  </header>
-
   <div class="workspace">
     <aside class="panel">
+      <div class="panel-head">
+        <form class="search" id="search-form">
+          <label class="sr" for="search-q">地名・住所</label>
+          <input id="search-q" type="search" placeholder="地名・住所で移動" autocomplete="off">
+          <button type="submit">移動</button>
+          <div class="hits" id="search-hits" hidden></div>
+        </form>
+        <p class="coords" id="coord-readout">カーソルを地図に乗せると緯度経度が出ます</p>
+        <div class="search-tools">
+          <button type="button" id="draw-line">線を描く</button>
+          <button type="button" id="draw-point">点を置く</button>
+          <button type="button" id="export-kml" disabled>KMLを書き出す</button>
+        </div>
+        <div class="draw-bar" id="draw-bar" hidden>
+          <span id="draw-status">地図をクリックして頂点を追加</span>
+          <button type="button" id="draw-undo">戻す</button>
+          <button type="button" id="draw-finish">線を確定</button>
+          <button type="button" id="draw-cancel">やめる</button>
+        </div>
+      </div>
       <div class="panel-tools">
         <button type="button" id="panel-narrow">狭く</button>
         <button type="button" id="panel-wide">広く</button>
@@ -54,20 +41,11 @@
       <div class="panel-resize" id="panel-resize" role="separator" aria-orientation="vertical" aria-label="メニューの幅"></div>
       <div class="panel-scroll">
       <section>
-        <h2>地域と年代</h2>
+        <h2>地域</h2>
         <label class="field">
           <span>地域</span>
           <select id="dataset"></select>
         </label>
-        <label class="field">
-          <span>年代と原図の縮尺</span>
-          <select id="era"></select>
-        </label>
-        <div class="row-buttons">
-          <button type="button" id="era-prev">前の年代</button>
-          <button type="button" id="era-next">次の年代</button>
-        </div>
-        <button type="button" class="pane-toggle" id="toggle-old">旧版地形図を閉じる</button>
         <p class="hint">同じ年に 5万分1 と 2万分1 がある地域は、両方を選べます。2万分1の方が細かい原図です。関東と東北地方太平洋岸は 5万分1 で、拡大の上限が一段低くなっています。</p>
         <fieldset class="choice">
           <legend>表示の粗密</legend>
@@ -78,38 +56,12 @@
           </div>
         </fieldset>
         <p class="hint" id="res-hint">標準は、その拡大率のタイルをそのまま使います。高は一段細かいタイル、低は一段粗いタイルです。</p>
-      </section>
-
-      <section>
-        <h2>いまの地図</h2>
-        <fieldset class="choice">
-          <legend>左の地図</legend>
-          <div class="seg seg-2" id="now-base">
-            <button type="button" data-base="gsi" class="is-on">地理院地図</button>
-            <button type="button" data-base="osm">OpenStreetMap</button>
-          </div>
-        </fieldset>
-        <label class="field" id="gsi-field">
-          <span>地理院地図</span>
-          <select id="gsi"></select>
-        </label>
         <label class="field">
           <span>左の地図に旧版を重ねる <b id="overlay-val">0%</b></span>
           <input id="overlay" type="range" min="0" max="100" value="0" step="5">
         </label>
-        <p class="hint">明治の図だけでは今の場所が分かりにくいとき、左の地図に旧版を透かして合わせます。3枚は同じ位置・同じ拡大率で動きます。</p>
-      </section>
-
-      <section>
-        <h2>空中写真</h2>
-        <label class="field">
-          <span>年代</span>
-          <select id="air"></select>
-        </label>
-        <div class="row-buttons">
-          <button type="button" id="air-older">前の年代</button>
-          <button type="button" id="air-newer">次の年代</button>
-        </div>
+        <p class="hint">明治の図だけでは今の場所が分かりにくいとき、左の地図に旧版を透かして合わせます。</p>
+        <button type="button" class="pane-toggle" id="toggle-old">旧版地形図を閉じる</button>
         <button type="button" class="pane-toggle" id="toggle-air">空中写真を閉じる</button>
         <p class="hint" id="air-hint">地理院タイルの年代別空中写真です。</p>
       </section>
@@ -124,7 +76,7 @@
           <button type="button" id="load-sample">サンプルを読み込む</button>
           <button type="button" id="fit-kml">線の範囲へ</button>
         </div>
-        <p class="hint">読み込んだKMLも、上で描いた線・点も、この一覧に並びます。色・太さ・削除はここで変えられます。上が最前面です。描いた図形はページを閉じると消えます。残すときは上の「KMLを書き出す」です。</p>
+        <p class="hint">読み込んだKMLも、描いた線・点も、この一覧に並びます。色・太さ・削除はここで変えられます。上が最前面です。描いた図形はページを閉じると消えます。残すときは上の「KMLを書き出す」です。</p>
         <ul class="layers" id="layers"></ul>
       </section>
 
@@ -184,10 +136,40 @@
       </div>
       <div class="panel-save">
         <button type="button" class="primary" data-open-save>地形図を保存</button>
-        <button type="button" data-open-air>空中写真を保存</button>
+        <button type="button" class="primary" data-open-air>空中写真を保存</button>
       </div>
     </aside>
 
+    <div class="stage">
+    <div class="switchbar">
+      <div class="switch-cell" id="switch-now">
+        <span class="switch-label">現在の地図</span>
+        <div class="seg seg-2" id="now-base">
+          <button type="button" data-base="gsi" class="is-on">地理院地図</button>
+          <button type="button" data-base="osm">OpenStreetMap</button>
+        </div>
+        <label class="field" id="gsi-field">
+          <span class="sr">地理院地図の種類</span>
+          <select id="gsi"></select>
+        </label>
+      </div>
+      <div class="switch-cell" id="switch-old">
+        <span class="switch-label">旧版地形図</span>
+        <div class="switch-row">
+          <button type="button" id="era-prev" title="前の年代">前</button>
+          <select id="era" aria-label="旧版地形図の年代"></select>
+          <button type="button" id="era-next" title="次の年代">次</button>
+        </div>
+      </div>
+      <div class="switch-cell" id="switch-air">
+        <span class="switch-label">空中写真</span>
+        <div class="switch-row">
+          <button type="button" id="air-older" title="前の年代">前</button>
+          <select id="air" aria-label="空中写真の年代"></select>
+          <button type="button" id="air-newer" title="次の年代">次</button>
+        </div>
+      </div>
+    </div>
     <div class="maps">
       <section class="map-wrap">
         <div class="sheet">
@@ -230,6 +212,7 @@
         <button type="button" id="reopen-old" hidden>旧版地形図を開く</button>
         <button type="button" id="reopen-air" hidden>空中写真を開く</button>
       </div>
+    </div>
     </div>
   </div>
 
